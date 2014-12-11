@@ -1,0 +1,13 @@
+Copy acl_server to /etc/init.d/ on Cumulus Linux switch
+
+Start acl_server daemon.
+
+WARNING
+Script provides no access controls. Installing a web server (Apache/NGINX) to
+reverse proxy acl_server is a simple way to add access controls, encryption,
+authentication etc.
+
+To limit access to localhost, change the line:
+server = HTTPServer(('',8080), ACLRequestHandler)
+to:
+server = HTTPServer(('127.0.0.1',8080), ACLRequestHandler) 

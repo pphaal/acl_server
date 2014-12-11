@@ -1,0 +1,11 @@
+acl_server
+----------
+
+Simple REST API for adding and removing ACLs on Cumulus Linux based on the
+article:
+
+http://blog.sflow.com/2014/06/restful-control-of-cumulus-linux-acls.html
+
+Additional features:
+1. Runs as a daemon
+2. Batching commits reduces REST call latency and increases throughput 

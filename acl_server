@@ -1,0 +1,230 @@
+#!/usr/bin/env python
+### BEGIN INIT INFO
+# Provides:          acl_server
+# Required-Start:    $acltool $network
+# Required-Stop:     $acltool $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: ACL REST Daemon
+# Description:       REST API for adding / removing ACLs 
+### END INIT INFO
+
+from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+from os.path import isfile
+from uuid import uuid4
+from json import dumps,loads
+from subprocess import Popen,STDOUT,PIPE
+from threading import Thread,Lock
+from time import sleep
+from daemon import runner
+import re, stat, os
+
+class CommitTask:
+  lastError = None
+  commit_t = None
+  commit_requests = 0
+  commit_processed = 0
+  lock = Lock()
+
+  def do_commit(self):
+    changed = True
+    while changed:
+      self.lock.acquire()
+      try:
+        requests = self.commit_requests
+      finally:
+        self.lock.release()
+      child = Popen(["cl-acltool","-i"],stderr=STDOUT,stdout=PIPE)
+      s = child.communicate()[0]
+      if child.returncode:
+        self.lastError = {'returncode':child.returncode, 'lines': s.splitlines()}
+      else:
+        self.lastError = None
+      self.lock.acquire()
+      try:
+        self.commit_processed = requests
+        if self.commit_requests != requests:
+          changed = True
+        else:
+          changed = False
+          self.commit_t = None
+      finally:
+        self.lock.release()
+      if changed:
+        sleep(0.5)
+
+  def commit(self):
+    self.lock.acquire()
+    try:
+      self.commit_requests = self.commit_requests + 1
+      if self.commit_t == None:
+        self.commit_t = Thread(target=self.do_commit)
+        self.commit_t.start()
+    finally:
+      self.lock.release()
+
+class ACLRequestHandler(BaseHTTPRequestHandler):
+  uripat = re.compile('^/acl/([a-z0-9_]+)$')
+  dir = '/etc/cumulus/acl/policy.d/'
+  priority = '50'
+  prefix = 'rest-'
+  bld = '.bld'
+  suffix = '.rules'
+  filepat = re.compile('^'+priority+prefix+'([a-z0-9_]+)\\'+suffix+'$')
+
+  def log_message(self,format,*args):
+    return
+
+  def commit(cls):
+     if cls.commitTask:
+       cls.commitTask.commit() 
+
+  def lastError(cls):
+    if cls.commitTask:
+       return cls.commitTask.lastError
+    else:
+       return None
+
+  def add_last_error(self, response):
+    lastError = self.lastError()
+    if lastError:
+      response['lastError'] = lastError
+
+  def write_last_error(self):
+    lastError = self.lastError()
+    if lastError:
+      response = {'lastError': lastError}
+      self.wfile.write(dumps(response))
+      return True
+    else:
+      return False
+  
+  def bldfile(self,name):
+    return self.dir+str(uuid4())+self.bld
+
+  def aclfile(self,name):
+    return self.dir+self.priority+self.prefix+name+self.suffix
+
+  def wheaders(self,status):
+    self.send_response(status)
+    self.send_header('Accept','application/json')
+    self.send_header('Content-Type','application/json')
+    self.end_headers() 
+
+  def do_PUT(self):
+    m = self.uripat.match(self.path)
+    if None != m:
+       name = m.group(1)
+       if 'lasterror' == name:
+         self.wheaders(403)
+       else:
+         if not 'application/json' in self.headers.getheader('content-type'):
+           self.wheaders(406)
+           return
+         len = int(self.headers.getheader('content-length'))
+         data = self.rfile.read(len)
+         try: 
+           lines = loads(data)
+         except ValueError:
+           self.wheaders(400)
+           return
+         fn = self.bldfile(name)
+         mode = stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+         umask_original = os.umask(0)
+         try:
+           f = os.fdopen(os.open(fn, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode), 'w')
+         finally:
+           os.umask(umask_original)
+         f.write('\n'.join(lines) + '\n')
+         f.flush()
+         os.fsync(f.fileno())
+         f.close()
+         os.rename(fn,self.aclfile(name))
+         self.commit()
+         self.write_last_error()
+         self.wheaders(202)
+    else:
+      self.wheaders(404)
+ 
+  def do_DELETE(self):
+    m = self.uripat.match(self.path)
+    if None != m:
+       name = m.group(1)
+       if 'lasterror' == name:
+         self.wheaders(403)
+       else:
+         fn = self.aclfile(name)
+         if isfile(fn):
+           os.remove(fn)
+           self.commit()
+         if self.write_last_error():
+           self.wheaders(200)
+         else:
+           self.wheaders(204)
+    elif '/acl/' == self.path:
+       for file in os.listdir(self.dir):
+         m = self.filepat.match(file)
+         if None != m:
+           os.remove(self.dir+file)
+       self.commit()
+       if self.write_last_error():
+         self.wheaders(200)
+       else:
+         self.wheaders(204)
+    else:
+       self.wheaders(404)
+
+  def do_GET(self):
+    m = self.uripat.match(self.path)
+    if None != m:
+       name = m.group(1)
+       if 'lasterror' == name:
+         lastError = self.lastError()
+         if lastError:
+            self.wheaders(200)
+            self.wfile.write(dumps(lastError))
+         else:
+            self.wheaders(204) 
+       else:
+         fn = self.aclfile(name)
+         if isfile(fn):
+           result = []
+           with open(fn) as f:
+             for line in f:
+               result.append(line.rstrip('\n'))
+           response = {'result': result}
+           self.add_last_error(response)
+           self.wheaders(200)
+           self.wfile.write(dumps(response))
+         else:
+           self.wheaders(404)
+    elif '/acl/' == self.path:
+       result = []
+       for file in os.listdir(self.dir):
+         m = self.filepat.match(file)
+         if None != m:
+           name = m.group(1)
+           result.append(name)
+       response = {'result': result}
+       self.add_last_error(response)
+       self.wheaders(200)
+       self.wfile.write(dumps(response))
+    else:
+       self.wheaders(404)
+
+class ACLDaemon():
+  def __init__(self):
+    self.stdin_path = '/dev/null'
+    self.stdout_path = '/dev/tty'
+    self.stderr_path = '/dev/tty'
+    self.pidfile_path = '/var/run/acl_server.pid'
+    self.pidfile_timeout = 5
+  def run(self):
+    commit = CommitTask()
+    ACLRequestHandler.commitTask = commit
+    server = HTTPServer(('',8080), ACLRequestHandler) 
+    server.serve_forever()
+
+app = ACLDaemon()
+daemon_runner = runner.DaemonRunner(app)
+daemon_runner.do_action() 
