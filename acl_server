@@ -17,6 +17,7 @@ from subprocess import Popen,STDOUT,PIPE
 from threading import Thread,Lock
 from time import sleep
 from daemon import runner
+from filecmp import cmp
 import re, stat, os
 
 class CommitTask:
@@ -134,8 +135,12 @@ class ACLRequestHandler(BaseHTTPRequestHandler):
          f.flush()
          os.fsync(f.fileno())
          f.close()
-         os.rename(fn,self.aclfile(name))
-         self.commit()
+         tgtname = self.aclfile(name)
+         if isfile(tgtname) and cmp(fn,tgtname,False):
+             os.remove(fn)
+         else:
+             os.rename(fn,self.aclfile(name))
+             self.commit()
          self.wheaders(202)
          lastError = self.lastError()
          if lastError:
