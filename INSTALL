@@ -1,4 +1,10 @@
-Copy acl_server to /etc/init.d/ on Cumulus Linux switch
+Install acl_server on Cumulus Linux
+-----------------------------------
+
+Copy acl_server to /etc/init.d/
+
+On Cumulus Linux 3.0 also install the systemd service file
+Copy acl_server.service to /lib/systemd/system/
 
 Start acl_server daemon.
 

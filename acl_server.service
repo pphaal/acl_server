@@ -1,0 +1,11 @@
+[Unit]
+Description=RESTful access to Cumulus Linux ACLs
+Documentation=https://github.com/pphaal/acl_server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/etc/init.d/acl_server
+
+[Install]
+WantedBy=multi-user.target

@@ -18,7 +18,7 @@ from threading import Thread,Lock
 from time import sleep
 from daemon import runner
 from filecmp import cmp
-import re, stat, os
+import re, stat, os, sys
 
 class CommitTask:
   lastError = None
@@ -264,6 +264,10 @@ class ACLDaemon():
     server = HTTPServer(('',8080), ACLRequestHandler) 
     server.serve_forever()
 
+daemonize = len(sys.argv) > 1
 app = ACLDaemon()
-daemon_runner = runner.DaemonRunner(app)
-daemon_runner.do_action() 
+if(daemonize):
+  daemon_runner = runner.DaemonRunner(app)
+  daemon_runner.do_action() 
+else:
+  app.run()
