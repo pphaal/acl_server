@@ -35,7 +35,7 @@ class CommitTask:
         requests = self.commit_requests
       finally:
         self.lock.release()
-      child = Popen(["cl-acltool","-i"],stderr=STDOUT,stdout=PIPE)
+      child = Popen(["/usr/cumulus/bin/cl-acltool","-i"],stderr=STDOUT,stdout=PIPE)
       s = child.communicate()[0]
       if child.returncode:
         self.lastError = {'returncode':child.returncode, 'lines': s.splitlines()}
@@ -205,7 +205,7 @@ class ACLRequestHandler(BaseHTTPRequestHandler):
        self.wheaders(200,checkLastError=True)
        self.wfile.write(dumps(result,indent=1,sort_keys=True))
     elif '/lldp/neighbors' == self.path:
-       child = Popen(["lldpcli","-f","json","show","neighbors","summary"],stderr=None,stdout=PIPE)
+       child = Popen(["/usr/sbin/lldpcli","-f","json","show","neighbors","summary"],stderr=None,stdout=PIPE)
        s = child.communicate()[0]
        if child.returncode:
          self.wheaders(500)
@@ -213,7 +213,7 @@ class ACLRequestHandler(BaseHTTPRequestHandler):
          self.wheaders(200)
          self.wfile.write(s.rstrip())
     elif '/lldp/configuration' == self.path:
-       child = Popen(["lldpcli","-f","json","show","configuration"],stderr=None,stdout=PIPE);
+       child = Popen(["/usr/sbin/lldpcli","-f","json","show","configuration"],stderr=None,stdout=PIPE);
        s = child.communicate()[0]
        if child.returncode:
           self.wheaders(500)
@@ -221,7 +221,7 @@ class ACLRequestHandler(BaseHTTPRequestHandler):
           self.wheaders(200)
           self.wfile.write(s.rstrip())
     elif '/hostname' == self.path:
-       child = Popen(["uname","-n"],stderr=None,stdout=PIPE);
+       child = Popen(["/bin/uname","-n"],stderr=None,stdout=PIPE);
        s = child.communicate()[0]
        if child.returncode:
           self.wheaders(500)
