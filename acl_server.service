@@ -5,7 +5,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/etc/init.d/acl_server
+ExecStart=/usr/sbin/acl_server
 
 [Install]
 WantedBy=multi-user.target

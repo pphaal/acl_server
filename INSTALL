@@ -1,19 +1,34 @@
-Install acl_server on Cumulus Linux
------------------------------------
+Install acl_server on Cumulus Linux 3.4+
+----------------------------------------
 
-Copy acl_server to /etc/init.d/
+sudo wget -P /usr/sbin/ https://raw.githubusercontent.com/pphaal/acl_server/master/acl_server
+sudo wget -P /lib/systemd/system/ https://github.com/pphaal/acl_server/blob/master/acl_server.service
+sudo chmod +x /usr/sbin/acl_server
+sudo systemctl enable acl_server.service
+sudo systemctl start acl_server.service
 
-On Cumulus Linux 3.0 also install the systemd service file
-Copy acl_server.service to /lib/systemd/system/
+Integrate with Cumulus Linux HTTP API
+-------------------------------------
+https://docs.cumulusnetworks.com/display/DOCS/HTTP+API
 
-Start acl_server daemon.
+sudo vi sudo vi /etc/nginx-restapi.conf
 
-WARNING
-Script provides no access controls. Installing a web server (Apache/NGINX) to
-reverse proxy acl_server is a simple way to add access controls, encryption,
-authentication etc.
+Add the following lines to the end of the server section:
+http {
+    ...
+    server {
+        ...
+        location / {
+            ...
+        }
 
-To limit access to localhost, change the line:
-server = HTTPServer(('',8080), ACLRequestHandler)
-to:
-server = HTTPServer(('127.0.0.1',8080), ACLRequestHandler) 
+        # Forward requests to acl_server daemon
+        location /sdn/ {
+            proxy_redirect off;
+            proxy_pass http://localhost:8081/;
+        }
+    }
+}
+
+sudo systemctl restart restserver
+

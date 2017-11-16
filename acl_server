@@ -1,13 +1,4 @@
 #!/usr/bin/env python
-### BEGIN INIT INFO
-# Provides:          acl_server
-# Required-Start:    $acltool $network
-# Required-Stop:     $acltool $network
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: ACL REST Daemon
-# Description:       REST API for adding / removing ACLs 
-### END INIT INFO
 
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 from os.path import isfile
@@ -16,7 +7,6 @@ from json import dumps,loads
 from subprocess import Popen,STDOUT,PIPE
 from threading import Thread,Lock
 from time import sleep
-from daemon import runner
 from filecmp import cmp
 import re, stat, os, sys
 
@@ -251,23 +241,7 @@ class ACLRequestHandler(BaseHTTPRequestHandler):
     else:
        self.wheaders(404)
 
-class ACLDaemon():
-  def __init__(self):
-    self.stdin_path = '/dev/null'
-    self.stdout_path = '/dev/tty'
-    self.stderr_path = '/dev/tty'
-    self.pidfile_path = '/var/run/acl_server.pid'
-    self.pidfile_timeout = 5
-  def run(self):
-    commit = CommitTask()
-    ACLRequestHandler.commitTask = commit
-    server = HTTPServer(('',8080), ACLRequestHandler) 
-    server.serve_forever()
+ACLRequestHandler.commitTask = CommitTask()
+server = HTTPServer(('localhost',8081), ACLRequestHandler) 
+server.serve_forever()
 
-daemonize = len(sys.argv) > 1
-app = ACLDaemon()
-if(daemonize):
-  daemon_runner = runner.DaemonRunner(app)
-  daemon_runner.do_action() 
-else:
-  app.run()
