@@ -4,5 +4,4 @@ acl_server
 Simple REST API for adding and removing ACLs on Cumulus Linux described in the
 article:
 
-http://blog.sflow.com/2014/12/rest-api-for-cumulus-linux-acls.html
-
+http://blog.sflow.com/2017/11/restful-control-of-cumulus-linux-acls.html
