@@ -23,7 +23,7 @@ http {
         }
 
         # Forward requests to acl_server daemon
-        location /sdn/ {
+        location /acl/ {
             proxy_redirect off;
             proxy_pass http://localhost:8081/;
         }

@@ -55,7 +55,7 @@ class CommitTask:
       self.lock.release()
 
 class ACLRequestHandler(BaseHTTPRequestHandler):
-  uripat = re.compile('^/acl/([a-z0-9_]+)$')
+  uripat = re.compile('^/([a-z0-9_]+)$')
   dir = '/etc/cumulus/acl/policy.d/'
   priority = '50'
   prefix = 'rest-'
@@ -153,7 +153,7 @@ class ACLRequestHandler(BaseHTTPRequestHandler):
            os.remove(fn)
            self.commit()
          self.wheaders(204,checkLastError=True)
-    elif '/acl/' == self.path:
+    elif '/' == self.path:
        for file in os.listdir(self.dir):
          m = self.filepat.match(file)
          if None != m:
@@ -185,7 +185,7 @@ class ACLRequestHandler(BaseHTTPRequestHandler):
            self.wfile.write(dumps(result,indent=1,sort_keys=True))
          else:
            self.wheaders(404,checkLastError=True)
-    elif '/acl/' == self.path:
+    elif '/' == self.path:
        result = []
        for file in os.listdir(self.dir):
          m = self.filepat.match(file)
@@ -194,50 +194,6 @@ class ACLRequestHandler(BaseHTTPRequestHandler):
            result.append(name)
        self.wheaders(200,checkLastError=True)
        self.wfile.write(dumps(result,indent=1,sort_keys=True))
-    elif '/lldp/neighbors' == self.path:
-       child = Popen(["/usr/sbin/lldpcli","-f","json","show","neighbors","summary"],stderr=None,stdout=PIPE)
-       s = child.communicate()[0]
-       if child.returncode:
-         self.wheaders(500)
-       else:
-         self.wheaders(200)
-         self.wfile.write(s.rstrip())
-    elif '/lldp/configuration' == self.path:
-       child = Popen(["/usr/sbin/lldpcli","-f","json","show","configuration"],stderr=None,stdout=PIPE);
-       s = child.communicate()[0]
-       if child.returncode:
-          self.wheaders(500)
-       else:
-          self.wheaders(200)
-          self.wfile.write(s.rstrip())
-    elif '/hostname' == self.path:
-       child = Popen(["/bin/uname","-n"],stderr=None,stdout=PIPE);
-       s = child.communicate()[0]
-       if child.returncode:
-          self.wheaders(500)
-       else:
-          self.wheaders(200)
-          self.wfile.write(dumps(s.rstrip())) 
-    elif '/ptm' == self.path:
-       dotfile = '/etc/ptm.d/topology.dot'
-       if isfile(dotfile):
-         topo = {'links':{}}
-         with open(dotfile) as f:
-           l = 1
-           for line in f:
-             link = re.search('([\S]+):(\S+)\s*(--|->)\s*(\S+):([^\s;,]+)',line)
-             if link:
-                s1 = self.dequote(link.group(1))
-                p1 = self.dequote(link.group(2))
-                s2 = self.dequote(link.group(4))
-                p2 = self.dequote(link.group(5))
-                linkname = 'L%d' % (l)
-                topo['links'][linkname] = {'node1':s1,'port1':p1,'node2':s2,'port2':p2}
-                l += 1
-         self.wheaders(200)
-         self.wfile.write(dumps(topo,indent=1,sort_keys=True))
-       else:
-         self.wheaders(404)
     else:
        self.wheaders(404)
 
