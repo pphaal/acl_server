@@ -244,4 +244,3 @@ class ACLRequestHandler(BaseHTTPRequestHandler):
 ACLRequestHandler.commitTask = CommitTask()
 server = HTTPServer(('localhost',8081), ACLRequestHandler) 
 server.serve_forever()
-
