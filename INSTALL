@@ -11,7 +11,7 @@ Integrate with Cumulus Linux HTTP API
 -------------------------------------
 https://docs.cumulusnetworks.com/display/DOCS/HTTP+API
 
-sudo vi /etc/nginx-restapi.conf
+sudo vi /etc/nginx/sites-available/nginx-restapi.conf
 
 Add the following lines to the end of the server section:
 http {
