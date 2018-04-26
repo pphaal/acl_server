@@ -2,7 +2,7 @@ Install acl_server on Cumulus Linux 3.4+
 ----------------------------------------
 
 sudo wget -P /usr/sbin/ https://raw.githubusercontent.com/pphaal/acl_server/master/acl_server
-sudo wget -P /lib/systemd/system/ https://github.com/pphaal/acl_server/blob/master/acl_server.service
+sudo wget -P /lib/systemd/system/ https://raw.githubusercontent.com/pphaal/acl_server/master/acl_server.service
 sudo chmod +x /usr/sbin/acl_server
 sudo systemctl enable acl_server.service
 sudo systemctl start acl_server.service
