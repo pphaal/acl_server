@@ -30,5 +30,5 @@ http {
     }
 }
 
-sudo systemctl restart restserver
+sudo systemctl restart nginx.service
 
